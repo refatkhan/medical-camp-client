@@ -26,19 +26,16 @@ const AuthProvider = ({ children }) => {
         setLoading(true);
         return createUserWithEmailAndPassword(auth, email, password);
     };
-
     // 🔹 Sign In (Email/Password)
     const signIn = (email, password) => {
         setLoading(true);
         return signInWithEmailAndPassword(auth, email, password);
     };
-
     // 🔹 Google Sign In
     const googleSignIn = () => {
         setLoading(true);
         return signInWithPopup(auth, googleProvider);
     };
-
     // 🔹 Update User Profile
     const updateUserProfile = (profile) => {
         return updateProfile(auth.currentUser, profile);
