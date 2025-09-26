@@ -1,11 +1,11 @@
 import React from 'react';
 
-const Navbar = () => {
+const MedicalCamp = () => {
     return (
         <div>
-            Navbar
+            Medical Camp
         </div>
     );
 };
 
-export default Navbar;
+export default MedicalCamp;
