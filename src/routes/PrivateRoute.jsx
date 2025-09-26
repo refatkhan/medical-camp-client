@@ -13,7 +13,6 @@ const PrivateRoute = ({ children }) => {
             </div>
         );
     }
-
     if (!user) {
         // Redirect to login, keep track of the current location
         return <Navigate to="/login" state={{ from: location }} replace />;
