@@ -1,10 +1,9 @@
 import axios from "axios";
-
+const axiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: { "Content-Type": "application/json" },
+});
 const useAxios = () => {
-  const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL, // ✅ set your API base url in .env
-  });
-
   return axiosInstance;
 };
 

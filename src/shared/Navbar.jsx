@@ -20,16 +20,23 @@ import { Link } from "react-router";
 import useAuth from "../hooks/useAuth";
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logOut } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
     handleMenuClose();
+    try {
+      await logOut(); // call the AuthProvider logOut
+      console.log("Logged out successfully");
+      // optional redirect to home
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   const toggleDrawer = () => setDrawerOpen(!drawerOpen);
@@ -92,6 +99,7 @@ const Navbar = () => {
               to="/signin"
               variant="contained"
               color="secondary"
+              sx={{ display: { xs: "none", lg: "flex" } }} // ✅ hidden on xs/sm/md, visible on lg+
             >
               Join Us
             </Button>
@@ -119,7 +127,6 @@ const Navbar = () => {
             </>
           )}
         </Box>
-
         {/* Hamburger menu for mobile */}
         <IconButton
           color="inherit"
@@ -128,7 +135,6 @@ const Navbar = () => {
         >
           <FaBars />
         </IconButton>
-
         {/* Drawer (mobile) */}
         <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer}>
           <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer}>

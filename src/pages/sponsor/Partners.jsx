@@ -1,6 +1,6 @@
 // src/components/Partners.jsx
 import React from "react";
-import { Box, Typography, Grid, Card, CardContent, Avatar } from "@mui/material";
+import { Box, Typography, Card, CardContent, Avatar, Grid } from "@mui/material";
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
@@ -17,8 +17,7 @@ const partners = [
 
 const Partners = () => {
     return (
-        <div class="bg-gradient-to-br from-yellow-200 via-pink-200 to-purple-200"
->
+        <div className="bg-gradient-to-br from-yellow-200 via-pink-200 to-purple-200">
             <Box
                 sx={{
                     py: { xs: 6, sm: 8, md: 10 },
@@ -36,9 +35,21 @@ const Partners = () => {
                     Our Partners & Sponsors
                 </Typography>
 
-                <Grid container spacing={{ xs: 2, sm: 4 }} justifyContent="center">
+                <Grid
+                    sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        gap: { xs: 2, sm: 4 },
+                    }}
+                >
                     {partners.map((partner, index) => (
-                        <Grid item xs={10} sm={6} md={4} lg={2.2} key={index}>
+                        <Box
+                            key={index}
+                            sx={{
+                                flex: { xs: '0 0 100%', sm: '0 0 48%', md: '0 0 30%', lg: '0 0 18%' },
+                            }}
+                        >
                             <Card
                                 sx={{
                                     borderRadius: 4,
@@ -78,7 +89,7 @@ const Partners = () => {
                                     </Typography>
                                 </CardContent>
                             </Card>
-                        </Grid>
+                        </Box>
                     ))}
                 </Grid>
             </Box>

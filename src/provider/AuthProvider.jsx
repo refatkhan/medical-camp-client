@@ -10,12 +10,12 @@ import {
     signInWithPopup,
 } from "firebase/auth";
 import app from "../firebase/firebase.init.js"; // adjust path if needed
-
+import useAxios from '../hooks/useAxios.js'
+import useAxiosSecure from "../hooks/useAxiosSecure.js";
 // Create context
 export const AuthContext = createContext(null);
 
 const auth = getAuth(app);
-
 const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -37,23 +37,59 @@ const AuthProvider = ({ children }) => {
         return signInWithPopup(auth, googleProvider);
     };
     // 🔹 Update User Profile
-    const updateUserProfile = (profile) => {
-        return updateProfile(auth.currentUser, profile);
-    };
-    // 🔹 Log Out
-    const logOut = () => {
-        setLoading(true);
-        return signOut(auth);
+    const updateUserProfile = (name, photoURL, user) => {
+        return updateProfile(user, {
+            displayName: name,
+            photoURL: photoURL,
+        });
     };
 
-    // 🔹 Observe User State
+    // 🔹 Log Out
+    const logOut = async () => {
+        setLoading(true);
+        localStorage.removeItem("token");
+        await signOut(auth);
+        setUser(null);
+        setLoading(false);
+    };
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const fetchUserProfile = async () => {
+            if (!user?.email) return;
+            try {
+                const res = await useAxiosSecure.get(`/users/${user.email}`);
+                setUser(res.data.user); // now includes contact, avatar, etc.
+            } catch (err) {
+                console.error("Failed to fetch user profile:", err);
+            }
+        };
+        fetchUserProfile();
+    }, [user?.email]);
+
+    // 🔹 Observe User State
+    const axiosInstance = useAxios();
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
+
+            if (currentUser?.email) {
+                try {
+                    const response = await axiosInstance.post("http://localhost:3000/jwt", {
+                        email: currentUser.email,
+                    });
+                    localStorage.setItem("token", response.data.token);
+                } catch (error) {
+                    console.error("Failed to fetch JWT token:", error);
+                    localStorage.removeItem("token");
+                }
+            } else {
+                localStorage.removeItem("token");
+            }
+
             setLoading(false);
         });
+
         return () => unsubscribe();
-    }, []);
+    }, [axiosInstance]);
 
     const authInfo = {
         user,

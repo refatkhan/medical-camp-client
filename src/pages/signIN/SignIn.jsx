@@ -1,8 +1,10 @@
 // src/pages/SignIn.jsx
-import React from "react";
+import React, { useContext } from "react";
 import { useForm, Controller } from "react-hook-form";
 import Lottie from "lottie-react";
 import { motion } from "framer-motion";
+import { AuthContext } from "../../provider/AuthProvider.jsx";
+import useAxios from "../../hooks/useAxios.js";
 import loginAnim from "../../assets/Login Leady"; // use your own Lottie file
 import {
     Button,
@@ -10,8 +12,25 @@ import {
 import GoogleIcon from "@mui/icons-material/Google";
 
 const SignIn = () => {
-    const handleGoogleSignIn = () => {
-        console.log("Google Sign In Clicked");
+    const { googleSignIn } = useContext(AuthContext);
+    const axiosInstance = useAxios();
+    const handleGoogleSignIn = async () => {
+        try {
+            const result = await googleSignIn();
+            const user = result.user;
+            // Send user info to backend
+            await axiosInstance.post("/users", {
+                name: user.displayName || "Google User",
+                email: user.email,
+                password: "GoogleAuth", // placeholder
+                image: user.photoURL || "",
+            });
+
+            alert("Signed in with Google successfully!");
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.message || err.message);
+        }
     };
     const {
         handleSubmit,

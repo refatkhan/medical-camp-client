@@ -1,5 +1,5 @@
 // src/pages/SignUp.jsx
-import React from "react";
+import React, { useContext } from "react";
 import { useForm, Controller } from "react-hook-form";
 import Lottie from "lottie-react";
 import { motion } from "framer-motion";
@@ -15,6 +15,8 @@ import {
 import GoogleIcon from "@mui/icons-material/Google";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { styled } from "@mui/material/styles";
+import { AuthContext } from "../../provider/AuthProvider.jsx";
+import useAxios from "../../hooks/useAxios.js";
 
 const VisuallyHiddenInput = styled("input")({
     clip: "rect(0 0 0 0)",
@@ -29,21 +31,71 @@ const VisuallyHiddenInput = styled("input")({
 });
 
 const SignUp = () => {
+    const { createUser, updateUserProfile, googleSignIn } = useContext(AuthContext);
+    const axiosInstance = useAxios();
+
     const {
         control,
         handleSubmit,
         watch,
         formState: { errors },
+        reset,
     } = useForm();
 
     const password = watch("password");
 
-    const onSubmit = (data) => {
-        console.log("Form Data:", data);
-    };
+    const handleSignUp = async (data) => {
+        try {
+            // 1️⃣ Create Firebase user
+            const userCredential = await createUser(data.email, data.password);
+            const user = userCredential.user;
+            // 2️⃣ Upload image if exists
+            let photoURL = "";
+            if (data.image) {
+                const formData = new FormData();
+                formData.append("image", data.image);
+                const res = await fetch(
+                    `https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_APP_IMGBB_KEY}`,
+                    { method: "POST", body: formData }
+                );
+                const result = await res.json();
+                photoURL = result.data.url;
+            }
+            // 3️⃣ Update Firebase profile
+            await updateUserProfile(data.name, photoURL, user);
 
-    const handleGoogleSignIn = () => {
-        console.log("Google Sign In Clicked");
+            // 4️⃣ Send user info to backend
+            await axiosInstance.post("/users", {
+                name: data.name,
+                email: data.email,
+                password: data.password,
+                image: photoURL,
+            });
+
+            reset();
+            alert("User registered successfully!");
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.message || err.message);
+        }
+    };
+    const handleGoogleSignIn = async () => {
+        try {
+            const result = await googleSignIn();
+            const user = result.user;
+            // Send user info to backend
+            await axiosInstance.post("/users", {
+                name: user.displayName || "Google User",
+                email: user.email,
+                password: "GoogleAuth", // placeholder
+                image: user.photoURL || "",
+            });
+
+            alert("Signed in with Google successfully!");
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.message || err.message);
+        }
     };
 
     return (
@@ -53,7 +105,7 @@ const SignUp = () => {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", // same gradient design as SignIn
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 p: 2,
             }}
         >
@@ -103,7 +155,7 @@ const SignUp = () => {
                             Create an Account
                         </Typography>
 
-                        <form onSubmit={handleSubmit(onSubmit)}>
+                        <form onSubmit={handleSubmit(handleSignUp)}>
                             {/* Name */}
                             <Controller
                                 name="name"
@@ -186,14 +238,8 @@ const SignUp = () => {
                             <Controller
                                 name="image"
                                 control={control}
-                                rules={{ required: "Image is required" }}
                                 render={({ field }) => (
-                                    <Stack
-                                        direction="row"
-                                        alignItems="center"
-                                        spacing={2}
-                                        mt={2}
-                                    >
+                                    <Stack direction="row" alignItems="center" spacing={2} mt={2}>
                                         <Button
                                             component="label"
                                             variant="contained"
@@ -223,12 +269,6 @@ const SignUp = () => {
                             >
                                 Sign Up
                             </Button>
-                            <p className="text-center text-gray-600 mt-8">
-                                Already have an account?{" "}
-                                <a href="/signin" className="text-purple-600 font-semibold">
-                                    Sign In
-                                </a>
-                            </p>
                         </form>
 
                         <Divider sx={{ my: 3 }}>OR</Divider>

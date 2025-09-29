@@ -14,7 +14,6 @@ const AboutUs = () => {
           services to communities. We organize camps with experienced doctors, volunteers, and modern medical
           facilities to ensure everyone gets the care they deserve.
         </p>
-
         {/* Sections */}
         <div className="grid md:grid-cols-2 gap-8 text-left">
           {/* Mission */}
