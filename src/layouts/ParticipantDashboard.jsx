@@ -12,8 +12,10 @@ import {
   Typography,
   IconButton,
   CssBaseline,
+  Button,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import { IoArrowBack } from "react-icons/io5";
 
 const drawerWidth = 240;
 
@@ -75,34 +77,46 @@ const ParticipantDashboard = () => {
           transition: "all 0.3s ease",
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: "none" } }}
+        <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { sm: "none" } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" noWrap component="div">
+              Participant Dashboard
+            </Typography>
+          </Box>
+
+          {/* Back to Home Button */}
+          <Button
+            component={Link}
+            to="/"
+            variant="contained"
+            startIcon={<IoArrowBack />}  // <-- replace with any icon from react-icons
+            sx={{
+              background: "linear-gradient(90deg, #6a11cb 0%, #2575fc 100%)", // match dashboard AppBar bg
+              color: "#fff", // text color
+              "&:hover": { background: "linear-gradient(90deg, #2575fc 0%, #6a11cb 100%)" }, // hover effect
+            }}
           >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            Participant Dashboard
-          </Typography>
+            Home
+          </Button>
         </Toolbar>
       </AppBar>
 
       {/* Sidebar Drawer */}
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
+      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
         {/* Mobile drawer */}
         <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
+          ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: "block", sm: "none" },
             "& .MuiDrawer-paper": {
@@ -142,8 +156,7 @@ const ParticipantDashboard = () => {
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           minHeight: "100vh",
-          background:
-            "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+          background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
           transition: "all 0.3s ease",
         }}
       >

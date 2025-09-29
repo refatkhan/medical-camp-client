@@ -1,6 +1,7 @@
 // src/pages/SignUp.jsx
 import React, { useContext } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { useNavigate } from "react-router-dom"; // at top
 import Lottie from "lottie-react";
 import { motion } from "framer-motion";
 import welcome from "../../assets/Welcome (1).json";
@@ -31,6 +32,7 @@ const VisuallyHiddenInput = styled("input")({
 });
 
 const SignUp = () => {
+    const navigate = useNavigate();
     const { createUser, updateUserProfile, googleSignIn } = useContext(AuthContext);
     const axiosInstance = useAxios();
 
@@ -44,13 +46,12 @@ const SignUp = () => {
 
     const password = watch("password");
 
+
     const handleSignUp = async (data) => {
         try {
-            // 1️⃣ Create Firebase user
-            const userCredential = await createUser(data.email, data.password);
-            const user = userCredential.user;
-            // 2️⃣ Upload image if exists
             let photoURL = "";
+
+            // Upload image if exists
             if (data.image) {
                 const formData = new FormData();
                 formData.append("image", data.image);
@@ -61,10 +62,15 @@ const SignUp = () => {
                 const result = await res.json();
                 photoURL = result.data.url;
             }
-            // 3️⃣ Update Firebase profile
-            await updateUserProfile(data.name, photoURL, user);
 
-            // 4️⃣ Send user info to backend
+            // Create user in Firebase
+            const userCredential = await createUser(data.email, data.password);
+            const firebaseUser = userCredential.user;
+
+            // Update Firebase profile
+            await updateUserProfile(data.name, photoURL, firebaseUser);
+
+            // Send user info to backend
             await axiosInstance.post("/users", {
                 name: data.name,
                 email: data.email,
@@ -72,31 +78,55 @@ const SignUp = () => {
                 image: photoURL,
             });
 
+            // Get JWT token from backend
+            const tokenResponse = await axiosInstance.post("/jwt", { email: data.email });
+            if (tokenResponse?.data?.token) {
+                localStorage.setItem("access-token", tokenResponse.data.token);
+            } else {
+                throw new Error("Failed to receive token from backend");
+            }
+
+            // Reset form, alert, redirect
             reset();
             alert("User registered successfully!");
+            navigate("/");
         } catch (err) {
             console.error(err);
             alert(err?.response?.data?.message || err.message);
         }
     };
-    const handleGoogleSignIn = async () => {
-        try {
-            const result = await googleSignIn();
-            const user = result.user;
-            // Send user info to backend
-            await axiosInstance.post("/users", {
-                name: user.displayName || "Google User",
-                email: user.email,
-                password: "GoogleAuth", // placeholder
-                image: user.photoURL || "",
-            });
 
-            alert("Signed in with Google successfully!");
-        } catch (err) {
-            console.error(err);
-            alert(err?.response?.data?.message || err.message);
+
+   const handleGoogleSignIn = async () => {
+    try {
+        const result = await googleSignIn();
+        const firebaseUser = result.user;
+        if (!firebaseUser?.email) throw new Error("No email returned from Google Sign-In");
+
+        // Send user info to backend
+        await axiosInstance.post("/users", {
+            name: firebaseUser.displayName || "Google User",
+            email: firebaseUser.email,
+            password: "GoogleAuth", // placeholder
+            image: firebaseUser.photoURL || "",
+        });
+
+        // Get JWT token from backend
+        const tokenResponse = await axiosInstance.post("/jwt", { email: firebaseUser.email });
+        if (tokenResponse?.data?.token) {
+            localStorage.setItem("access-token", tokenResponse.data.token);
+        } else {
+            throw new Error("Failed to receive token from backend");
         }
-    };
+
+        alert("Signed in with Google successfully!");
+        navigate("/");
+    } catch (err) {
+        console.error(err);
+        alert(err?.response?.data?.message || err.message);
+    }
+};
+
 
     return (
         <Box

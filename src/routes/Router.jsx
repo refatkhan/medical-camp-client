@@ -6,15 +6,10 @@ import SignUp from "../pages/signUP/SignUp";
 import SignIn from "../pages/signIN/SignIn";
 import AboutUs from "../pages/aboutUs/AboutUs";
 import ContactUs from "../pages/contactUs/ContactUs";
-
-// Camp-related
 import AvailableCamps from "../pages/camps/AvailableCamps";
 import CampDetails from "../pages/camps/CampDetails";
-
-
+import Payments from "../pages/payments/Payments";
 // Dashboard
-import DashboardLayout from "../layouts/DashboardLayout";
-
 // Organizer pages
 import OrganizerProfile from "../pages/dashboard/organizer/OrganizerProfile";
 import AddCamp from "../pages/dashboard/organizer/AddCamp";
@@ -28,9 +23,8 @@ import Analytics from "../pages/dashboard/participant/Analytics";
 import RegisteredCamps from "../pages/dashboard/participant/RegisteredCamps";
 import PaymentHistory from "../pages/dashboard/participant/PaymentHistory";
 
-// Private route wrapper
-import PrivateRoute from './PrivateRoute.jsx'
-import Payments from "../pages/payments/Payments";
+import PrivateRoute from './PrivateRoute.jsx';
+import DashboardWrapper from "../layouts/DashboardWrapper.jsx";
 
 export const router = createBrowserRouter([
     {
@@ -38,47 +32,40 @@ export const router = createBrowserRouter([
         element: <RootLayout />,
         errorElement: <Error />,
         children: [
-            { index: true, element: <Home /> },
-            { path: "signup", element: <SignUp /> },
-            { path: "signin", element: <SignIn /> },
-            { path: "about-us", element: <AboutUs /> },
-            { path: "contact-us", element: <ContactUs /> },
-            { path: "available-camps", element: <AvailableCamps /> },
+            { path: "/", element: <Home /> },
+            { path: "/signin", element: <SignIn /> },
+            { path: "/signup", element: <SignUp /> },
+            { path: "/about-us", element: <AboutUs /> },
+            { path: "/contact-us", element: <ContactUs /> },
+            { path: "/available-camps", element: <AvailableCamps /> },
             {
-                path: "camp-details/:id",
+                path: "/camp-details/:id",
                 element: (
-                    <>
+                    <PrivateRoute>
                         <CampDetails />
-                    </>
+                    </PrivateRoute>
                 ),
             },
             {
-                path: "payment/:id",
+                path: "/payment/:id",
                 element: (
                     <PrivateRoute>
-                        <Payments></Payments>
+                        <Payments />
                     </PrivateRoute>
                 ),
             },
-          /*  {
-                path: "feedback",
-                element: (
-                    <PrivateRoute>
-                        <Feedback />
-                    </PrivateRoute>
-                ),
-            },*/
         ],
     },
     {
         path: "/dashboard",
         element: (
             <PrivateRoute>
-                <DashboardLayout />
+              <DashboardWrapper></DashboardWrapper>
             </PrivateRoute>
         ),
-        errorElement: <Error />,
         children: [
+            // Default dashboard page
+           
             // Organizer routes
             { path: "organizer-profile", element: <OrganizerProfile /> },
             { path: "add-camp", element: <AddCamp /> },
@@ -91,11 +78,8 @@ export const router = createBrowserRouter([
             { path: "analytics", element: <Analytics /> },
             { path: "registered-camps", element: <RegisteredCamps /> },
             { path: "payment-history", element: <PaymentHistory /> },
-            /*{ path: "feedback", element: <Feedback /> },*/
         ],
     },
-    {
-        path: "*",
-        element: <Error />, // Catch-all for 404
-    },
+
+    { path: "*", element: <Error /> },
 ]);

@@ -10,37 +10,68 @@ import {
     Button,
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
+import { Navigate } from "react-router";
 
 const SignIn = () => {
-    const { googleSignIn } = useContext(AuthContext);
+    const { googleSignIn, signIn } = useContext(AuthContext);
     const axiosInstance = useAxios();
     const handleGoogleSignIn = async () => {
         try {
             const result = await googleSignIn();
-            const user = result.user;
+            const firebaseUser = result.user;
+            if (!firebaseUser?.email) throw new Error("No email returned from Google Sign-In");
+
             // Send user info to backend
             await axiosInstance.post("/users", {
-                name: user.displayName || "Google User",
-                email: user.email,
+                name: firebaseUser.displayName || "Google User",
+                email: firebaseUser.email,
                 password: "GoogleAuth", // placeholder
-                image: user.photoURL || "",
+                image: firebaseUser.photoURL || "",
             });
 
+            // Get JWT token from backend
+            const tokenResponse = await axiosInstance.post("/jwt", { email: firebaseUser.email });
+            if (tokenResponse?.data?.token) {
+                localStorage.setItem("access-token", tokenResponse.data.token);
+            } else {
+                throw new Error("Failed to receive token from backend");
+            }
+
             alert("Signed in with Google successfully!");
+            Navigate("/");
         } catch (err) {
             console.error(err);
             alert(err?.response?.data?.message || err.message);
         }
     };
+
     const {
         handleSubmit,
         control,
         formState: { errors },
     } = useForm();
 
-    const onSubmit = (data) => {
-        console.log("Login Data:", data);
-        // TODO: integrate with Firebase Auth or backend login
+    const onSubmit = async (data) => {
+        try {
+            // Sign in with Firebase
+            const userCredential = await signIn(data.email, data.password);
+            const firebaseUser = userCredential.user;
+            if (!firebaseUser?.email) throw new Error("Firebase user email missing");
+
+            // Request JWT from backend
+            const tokenRes = await axiosInstance.post("/jwt", { email: firebaseUser.email });
+            if (tokenRes?.data?.token) {
+                localStorage.setItem("access-token", tokenRes.data.token);
+            } else {
+                throw new Error("Failed to receive token from backend");
+            }
+
+            alert("Signed in successfully!");
+            navigate("/"); // or redirect to dashboard
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.message || err.message);
+        }
     };
 
     return (

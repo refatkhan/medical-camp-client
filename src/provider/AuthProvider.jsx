@@ -1,4 +1,5 @@
 import React, { createContext, useEffect, useState } from "react";
+import useAxiosSecure from "../hooks/useAxiosSecure.js";
 import {
     getAuth,
     onAuthStateChanged,
@@ -11,20 +12,23 @@ import {
 } from "firebase/auth";
 import app from "../firebase/firebase.init.js"; // adjust path if needed
 import useAxios from '../hooks/useAxios.js'
-import useAxiosSecure from "../hooks/useAxiosSecure.js";
+import axios from "axios";
+
 // Create context
 export const AuthContext = createContext(null);
 
 const auth = getAuth(app);
 const AuthProvider = ({ children }) => {
+    const axiosSecure = useAxiosSecure();
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     // Providers
     const googleProvider = new GoogleAuthProvider();
     // 🔹 Sign Up
-    const createUser = (email, password) => {
+    const createUser = async (email, password) => {
         setLoading(true);
-        return createUserWithEmailAndPassword(auth, email, password);
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        return result.user;
     };
     // 🔹 Sign In (Email/Password)
     const signIn = (email, password) => {
@@ -32,13 +36,18 @@ const AuthProvider = ({ children }) => {
         return signInWithEmailAndPassword(auth, email, password);
     };
     // 🔹 Google Sign In
-    const googleSignIn = () => {
+    const googleSignIn = async () => {
         setLoading(true);
-        return signInWithPopup(auth, googleProvider);
+        const result = await signInWithPopup(auth, googleProvider);
+        return result.user; // important!
     };
     // 🔹 Update User Profile
-    const updateUserProfile = (name, photoURL, user) => {
-        return updateProfile(user, {
+    const updateUserProfile = (name, photoURL, userParam) => {
+        const currentUser = userParam || auth.currentUser;
+        if (!currentUser) {
+            throw new Error("No user is signed in for profile update");
+        }
+        return updateProfile(currentUser, {
             displayName: name,
             photoURL: photoURL,
         });
@@ -52,18 +61,33 @@ const AuthProvider = ({ children }) => {
         setUser(null);
         setLoading(false);
     };
-    useEffect(() => {
-        const fetchUserProfile = async () => {
-            if (!user?.email) return;
-            try {
-                const res = await useAxiosSecure.get(`/users/${user.email}`);
-                setUser(res.data.user); // now includes contact, avatar, etc.
-            } catch (err) {
-                console.error("Failed to fetch user profile:", err);
-            }
-        };
-        fetchUserProfile();
-    }, [user?.email]);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+      if (currentUser?.email) {
+        const userData = { email: currentUser?.email };
+        axios
+          .post(
+            "http://localhost:3000/jwt",
+            userData
+          )
+          .then((res) => {
+            const token = res.data.token;
+            localStorage.setItem("token", token);
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      } else {
+        setUser(currentUser);
+      }
+      setLoading(false);
+    });
+    return () => {
+      return unsubscribe();
+    };
+  }, []);
 
     // 🔹 Observe User State
     const axiosInstance = useAxios();

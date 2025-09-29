@@ -24,6 +24,7 @@ const ParticipantProfile = () => {
 
     const [open, setOpen] = useState(false);
     const [loadingAvatar, setLoadingAvatar] = useState(false);
+    const [loadingProfile, setLoadingProfile] = useState(true);
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -31,26 +32,41 @@ const ParticipantProfile = () => {
         avatar: "",
     });
 
-    // Initialize form data from user context
+    // Fetch profile from backend on mount
     useEffect(() => {
-        if (user) {
-            setFormData({
-                name: user.displayName || user.name || "",
-                email: user.email || "",
-                contact: user.contact || "",
-                avatar: user.avatar || user.image || user.photoURL || "",
-            });
-        }
-    }, [user]);
+        const fetchProfile = async () => {
+            if (!user?.email) return;
+            try {
+                setLoadingProfile(true);
+                const res = await axiosSecure.get("/profile"); // JWT identifies user
+                const profile = res.data;
 
-    // Handle text field changes
-    const handleChange = (e) => {
+                setFormData({
+                    name: profile.name || "",
+                    email: profile.email || "",
+                    contact: profile.contact || "",
+                    avatar: profile.avatar || profile.photoURL || profile.image || "",
+                });
+
+                // Merge backend profile into context
+                setUser(prev => ({ ...prev, ...profile }));
+            } catch (err) {
+                console.error("Failed to fetch profile:", err);
+            } finally {
+                setLoadingProfile(false);
+            }
+        };
+
+        fetchProfile();
+    }, [user?.email]);
+
+    const handleChange = e => {
         const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // Handle avatar upload to ImageBB
-    const handleAvatarChange = async (e) => {
+    // Upload avatar
+    const handleAvatarChange = async e => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -65,11 +81,9 @@ const ParticipantProfile = () => {
                 body: formDataImg,
             });
             const data = await res.json();
-
             if (data.success) {
-                setFormData((prev) => ({ ...prev, avatar: data.data.url }));
+                setFormData(prev => ({ ...prev, avatar: data.data.url }));
             } else {
-                alert("Failed to upload avatar");
                 console.error("ImageBB response:", data);
             }
         } catch (err) {
@@ -80,28 +94,54 @@ const ParticipantProfile = () => {
         }
     };
 
-    // Handle profile update
     const handleUpdate = async () => {
         try {
             const { name, avatar, contact } = formData;
-            // 1️⃣ Update Firebase profile
-            if (user && updateUserProfile) {
-                await updateUserProfile(name, avatar, user); // photoURL
+
+            // Update Firebase if name/avatar changed
+            if ((user.displayName !== name || user.photoURL !== avatar) && updateUserProfile) {
+                await updateUserProfile(name, avatar, user);
             }
-            // 2️⃣ Update MongoDB profile
+
+            // Update backend
             const payload = { name, contact };
-            if (avatar) payload.avatar = avatar; // save as 'avatar' in MongoDB
-            const response = await axiosSecure.patch("/update-profile", payload);
-            // 3️⃣ Update context user with latest MongoDB data
-            if (setUser) setUser(response.data.user);
-            alert(response.data.message || "Profile updated successfully!");
-            console.log(user)
+            if (avatar) payload.avatar = avatar;
+
+            const res = await axiosSecure.patch("/update-profile", payload);
+            const updatedUser = res.data.user;
+
+            // Merge updated user into context
+            setUser(prev => ({ ...prev, ...updatedUser }));
+            setFormData({
+                name: updatedUser.name || "",
+                email: updatedUser.email || "",
+                contact: updatedUser.contact || "",
+                avatar: updatedUser.avatar || updatedUser.photoURL || "",
+            });
+
+            alert(res.data.message || "Profile updated successfully!");
+        } catch (err) {
+            console.error(err);
+        } finally {
             setOpen(false);
-        } catch (error) {
-            console.error(error);
-            alert(error.response?.data?.message || "Server error");
         }
     };
+
+    if (loadingProfile) {
+        return (
+            <Box
+                sx={{
+                    minHeight: "100vh",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                }}
+            >
+                <CircularProgress />
+            </Box>
+        );
+    }
+
     return (
         <Box
             sx={{
@@ -135,7 +175,6 @@ const ParticipantProfile = () => {
                         />
                         <Stack spacing={0.5} alignItems="center">
                             <Typography variant="h6">{formData.name}</Typography>
-                            {/* Display Contact */}
                             <Typography variant="body2" color="text.secondary">
                                 Contact: {formData.contact || "Not Provided"}
                             </Typography>
@@ -145,7 +184,6 @@ const ParticipantProfile = () => {
                             Update
                         </Button>
                     </Stack>
-
                 </Card>
             </Fade>
 
@@ -156,18 +194,13 @@ const ParticipantProfile = () => {
                     <Stack spacing={2} mt={1} alignItems="center">
                         <Box sx={{ position: "relative" }}>
                             <Avatar
-                                src={formData.avatar || user.avatar || user.photoURL || user.image || "/default-avatar.png"}
+                                src={formData.avatar || user.avatar || user.photoURL || "/default-avatar.png"}
                                 sx={{ width: 100, height: 100 }}
                             />
                             {loadingAvatar && (
                                 <CircularProgress
                                     size={100}
-                                    sx={{
-                                        position: "absolute",
-                                        top: 0,
-                                        left: 0,
-                                        zIndex: 1,
-                                    }}
+                                    sx={{ position: "absolute", top: 0, left: 0, zIndex: 1 }}
                                 />
                             )}
                         </Box>
@@ -179,13 +212,7 @@ const ParticipantProfile = () => {
                             onChange={handleChange}
                             fullWidth
                         />
-                        <TextField
-                            label="Email"
-                            name="email"
-                            value={formData.email}
-                            fullWidth
-                            disabled
-                        />
+                        <TextField label="Email" name="email" value={formData.email} fullWidth disabled />
                         <TextField
                             label="Contact"
                             name="contact"
@@ -196,12 +223,7 @@ const ParticipantProfile = () => {
 
                         <Button variant="outlined" component="label">
                             Upload Avatar
-                            <input
-                                type="file"
-                                hidden
-                                accept="image/*"
-                                onChange={handleAvatarChange}
-                            />
+                            <input type="file" hidden accept="image/*" onChange={handleAvatarChange} />
                         </Button>
                     </Stack>
                 </DialogContent>
